@@ -145,17 +145,6 @@ def loss_fn(model, inputs, targets, training):
   #  sys.stderr.write("accuracy:%.4f\n" %
   #                 (one_accuracy))
 
-  '''
-  batchsize,NUM_CLASSES = outputs.shape
-  one_labels = tf.expand_dims(labels, 1) # 增加一个维度
-  indices = tf.expand_dims(tf.range(0, batchsize,1), 1) #生成索引
-  concated = tf.concat([tf.to_int32(indices), tf.to_int32(one_labels)] , 1) #作为拼接
-  onehot_labels = tf.sparse_to_dense(concated, tf.stack([batchsize, NUM_CLASSES]), 1, 0) # 
-  lossfn = tf.reduce_mean(tf.nn.weighted_cross_entropy_with_logits(
-    tf.to_float(onehot_labels), outputs,10))
-  #sys.stderr.write("batchsize:%d--NUM_CLASSES:%d------lossfn:%s\n" %
-  #                 (batchsize,NUM_CLASSES,lossfn))
-  '''
   lossfn = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
    labels=labels, logits=outputs))
   return lossfn,one_accuracy
@@ -180,10 +169,12 @@ def evaluate(model, data):
   """evaluate an epoch."""
   total_loss = 0.0
   total_accuracy = 0.0
-  total_batches = 0
+  total_batches = 1
+  accuracy = 0
+  loss = 0.0
   start = time.time()
   #writer = tf.contrib.summary.create_file_writer(FLAGS.logdir)
-  global_step=tf.train.get_or_create_global_step()  # return global step var
+  global_step=tf.compat.v1.train.get_or_create_global_step()  # return global step var
   #writer.set_as_default()
   for j in range(0,FLAGS.seq_len):
     for _, i in enumerate(range(0, data.shape[0] - 1, FLAGS.seq_len)):
@@ -194,16 +185,16 @@ def evaluate(model, data):
       #sys.stderr.write("evaluate--inp:%s target %s --i:%d,j:%d int(FLAGS.seq_len/FLAGS.batch_size):%d data.shape[0]:%d\n" %
       #               (inp, target,i,j,int(FLAGS.seq_len/FLAGS.batch_size),data.shape[0]))
       loss,accuracy = loss_fn(model, inp, target, training=False)
-      total_loss += loss.numpy()
+      total_loss += loss
       total_accuracy += accuracy
       total_batches += 1
     global_step.assign_add(1)
     with tf.contrib.summary.record_summaries_every_n_global_steps(1):
         tf.contrib.summary.scalar('eval_acc', accuracy)
-        tf.contrib.summary.scalar('eval_loss',loss.numpy())
+        tf.contrib.summary.scalar('eval_loss',loss)
 
-    sys.stderr.write("evaluate---- total_batches:%d loss %.6f accuracy %.8f\n" %
-                    (total_batches,loss.numpy(), accuracy))
+    #sys.stderr.write("evaluate---- total_batches:%d loss %.6f accuracy %.8f\n" %
+    #                (total_batches,loss, accuracy))
   time_in_ms = (time.time() - start) * 1000
   sys.stderr.write("eval loss %.6f eval accuracy %.8f(eval took %d ms)\n" %
                    (total_loss / total_batches, total_accuracy / total_batches,time_in_ms))
@@ -223,14 +214,16 @@ def train(model, optimizer, train_data, sequence_length, clip_ratio):
   total = [0.0]*2
   total_time = 0
   #writer = tf.contrib.summary.create_file_writer(FLAGS.logdir)
-  global_step=tf.train.get_or_create_global_step()  # return global step var
+  global_step=tf.compat.v1.train.get_or_create_global_step()  # return global step var
   #writer.set_as_default()
-
+  
   for j in range(0,sequence_length,2): 
     for batch, i in enumerate(range(0, train_data.shape[0] - 1, sequence_length)):
 
       train_seq, train_target = _get_batch(train_data, i+j, sequence_length)
+      
       a,b = train_seq.shape
+
       if a < sequence_length/2:
         continue
 
@@ -259,6 +252,7 @@ def train(model, optimizer, train_data, sequence_length, clip_ratio):
 class Datasets(object):
 
   def __init__(self, path):
+    
     self.word2idx = {}
     self.idx2word = []  # integer id -> word string
     # Files represented as a list of integer ids (as opposed to list of string
@@ -266,15 +260,32 @@ class Datasets(object):
 
     #permutations
     #combinations
-    comblist = list(combinations([str(1).zfill(2),str(2).zfill(2),str(3).zfill(2),
+    comblist = list(combinations([
+            str(1).zfill(2),str(2).zfill(2),str(3).zfill(2),
             str(4).zfill(2),str(5).zfill(2),str(6).zfill(2),
             str(7).zfill(2),str(8).zfill(2),str(9).zfill(2),
-            str(10).zfill(2),str(11).zfill(2)], 5))
+            str(10).zfill(2),str(11).zfill(2),str(12).zfill(2),str(13).zfill(2),
+            str(14).zfill(2),str(15).zfill(2),str(16).zfill(2),str(17).zfill(2),
+            str(18).zfill(2),str(19).zfill(2),str(20).zfill(2),str(21).zfill(2),
+            str(22).zfill(2),str(23).zfill(2),str(24).zfill(2),str(25).zfill(2),
+            str(26).zfill(2),str(27).zfill(2),str(28).zfill(2),str(29).zfill(2),
+            str(30).zfill(2),str(31).zfill(2),
+            str(32).zfill(2),str(33).zfill(2),str(34).zfill(2),str(35).zfill(2),
+            str(36).zfill(2),str(37).zfill(2),str(38).zfill(2),str(39).zfill(2),
+            str(40).zfill(2),str(41).zfill(2),
+            str(42).zfill(2),str(43).zfill(2),str(44).zfill(2),str(45).zfill(2),
+            str(46).zfill(2),str(47).zfill(2),str(48).zfill(2),str(49).zfill(2),
+            str(50).zfill(2),str(51).zfill(2),
+            str(52).zfill(2),str(53).zfill(2),str(54).zfill(2),str(55).zfill(2),
+            str(56).zfill(2),str(57).zfill(2),str(58).zfill(2)
+            ], 6))
     i = 0
     for sublist in comblist:
+        #print(sublist)
         self.word2idx["".join(sublist)] = i
         i=i+1
     #self.word2idx = { (str(int(num/11**4)%11+1).zfill(2) + str(int(num/11**3)%11+1).zfill(2) + str(int(num/11**2)%11+1).zfill(2) + str(int(num/11)%11+1).zfill(2) +str(num%11+1).zfill(2)) : num for num in range(11*11*11*11*11) }
+    #print(self.word2idx)
     if not FLAGS.predictpath :
       self.train = self.tokenize(os.path.join(path, "train.txt")) 
       self.valid = self.tokenize(os.path.join(path, "valid.txt"))
@@ -286,7 +297,8 @@ class Datasets(object):
 
   def vocab_size(self):
     print("---------------vocab_size:%d\n" %(len(self.idx2word)))
-    return 462 #11*10*9*8*7 #462
+    return len(self.idx2word)
+    #return 462 #11*10*9*8*7 #462
 
 
   def add(self, word):
@@ -297,28 +309,32 @@ class Datasets(object):
   def tokenize(self, path):
     """Read text file in path and return a list of integer token ids."""
     tokens = 0
-    with tf.gfile.Open(path, "r") as f:
+    with tf.io.gfile.GFile(path, "r") as f:
       for line in f:
+        #print(line)
         words = line.strip()
         if(words!=''):
           tokens += 1
           self.add(words)
 
     # Tokenize file content
-    with tf.gfile.Open(path, "r") as f:
+    with tf.io.gfile.GFile(path, "r") as f:
       ids = np.zeros(tokens).astype(np.int64)
       token = 0
       for line in f:
+        #print(line)
         words = line.strip()
         if(words!=''):
             myword = self.word2idx.get(words)
+            if(self.word2idx.get(words)==None):
+                print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>self.word2idx.get(%s)==None"%words)
             ids[token] = myword
             token += 1
     return ids
 
 
 def predict(self):
-  tf.enable_eager_execution()
+  tf.compat.v1.enable_eager_execution()
   pre_data = Datasets(FLAGS.predictpath)
   sys.stderr.write( "pre_data.predice--------- :%s\n"% (pre_data.predict) )
   outputlist = []
@@ -330,7 +346,7 @@ def predict(self):
                      FLAGS.hidden_dim, FLAGS.num_layers, 0,
                      False,0)
   #optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-  optimizer = tf.train.AdamOptimizer(
+  optimizer = tf.compat.v1.train.AdamOptimizer(
         learning_rate,
         beta1=0.9,
         beta2=0.999,
@@ -341,7 +357,7 @@ def predict(self):
   #checkpoint = tf.train.Checkpoint(model=model)
   checkpoint = tfe.Checkpoint(optimizer=optimizer,
                       model=model,
-                      optimizer_step=tf.train.get_or_create_global_step())
+                      optimizer_step=tf.compat.v1.train.get_or_create_global_step())
 
   checkpoint.restore(tf.train.latest_checkpoint(FLAGS.logdir))
   sys.stderr.write( "train_data--------------------------- :%s \n"% train_data )
@@ -370,11 +386,12 @@ def predict(self):
 
 
 def main(_):
-  tf.enable_eager_execution()
+  tf.compat.v1.enable_eager_execution()
 
   if not FLAGS.data_path:
     raise ValueError("Must specify --data-path")
   corpus = Datasets(FLAGS.data_path)
+  
   train_data = _divide_into_batches(corpus.train, FLAGS.batch_size)
   eval_data = _divide_into_batches(corpus.valid, 10)
 
@@ -391,7 +408,7 @@ def main(_):
                      FLAGS.hidden_dim, FLAGS.num_layers, FLAGS.dropout,
                      use_cudnn_rnn,0.5)
     #optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-    optimizer = tf.train.AdamOptimizer(
+    optimizer = tf.compat.v1.train.AdamOptimizer(
         learning_rate,
         beta1=0.9,
         beta2=0.999,
@@ -401,7 +418,7 @@ def main(_):
     )
     checkpoint = tfe.Checkpoint(optimizer=optimizer,
                       model=model,
-                      optimizer_step=tf.train.get_or_create_global_step())
+                      optimizer_step=tf.compat.v1.train.get_or_create_global_step())
 
     '''
     = tf.train.Checkpoint(
@@ -417,7 +434,7 @@ def main(_):
     best_loss = None
     best_accuracy = 0.0
     writer = tf.contrib.summary.create_file_writer(FLAGS.logdir)
-    global_step=tf.train.get_or_create_global_step()  # return global step var
+    global_step=tf.compat.v1.train.get_or_create_global_step()  # return global step var
     writer.set_as_default()
 
     for _ in range(FLAGS.epoch):
@@ -455,9 +472,9 @@ if __name__ == "__main__":
   parser.add_argument(
       "--predictpath", type=str, default="", help="Directory for checkpoint.")
   parser.add_argument(
-      "--logdir", type=str, default="/home/chris/workspace/rnn_lottery/savedmodel", help="Directory for checkpoint.")
-  parser.add_argument("--epoch", type=int, default=80, help="Number of epochs.")
-  parser.add_argument("--batch-size", type=int, default=10, help="Batch size.")
+      "--logdir", type=str, default="savedmodel", help="Directory for checkpoint.")
+  parser.add_argument("--epoch", type=int, default=800, help="Number of epochs.")
+  parser.add_argument("--batch-size", type=int, default=100, help="Batch size.")
   parser.add_argument(
       "--seq-len", type=int, default=30, help="Sequence length.")
   parser.add_argument(
@@ -482,6 +499,6 @@ if __name__ == "__main__":
   if FLAGS.predictpath :
     sys.stderr.write( "predict mode: %s  , %s \n" %
                          (FLAGS,unparsed))
-    tf.app.run(main=predict, argv=[sys.argv[0]] + unparsed)
+    tf.compat.v1.app.run(main=predict, argv=[sys.argv[0]] + unparsed)
   else:
-    tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+    tf.compat.v1.app.run(main=main, argv=[sys.argv[0]] + unparsed)
